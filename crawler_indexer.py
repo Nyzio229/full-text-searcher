@@ -39,8 +39,10 @@ class FilterAndNormalizeUrls(beam.DoFn):
 
 
 class RobotsFilter(beam.DoFn):
+    def __init__(self, block_on_error: bool = False):
+        self.block_on_error = block_on_error
     def process(self, url: str):
-        if can_fetch(url):
+        if can_fetch(url, block_on_error=self.block_on_error):
             yield url
 
 
@@ -84,7 +86,7 @@ def run_pipeline(
             p
             | "Seeds" >> beam.Create(seeds)
             | "Filter0" >> beam.ParDo(FilterAndNormalizeUrls(allowed))
-            | "Robots0" >> beam.ParDo(RobotsFilter())
+            | "Robots0" >> beam.ParDo(RobotsFilter(block_on_error=False))
             | "Distinct0" >> beam.Distinct()
         )
 
@@ -103,7 +105,7 @@ def run_pipeline(
                     docs
                     | f"Links D{depth}" >> beam.ParDo(ExtractLinks())
                     | f"Filter D{depth}" >> beam.ParDo(FilterAndNormalizeUrls(allowed))
-                    | f"Robots D{depth}" >> beam.ParDo(RobotsFilter())
+                    | f"Robots D{depth}" >> beam.ParDo(RobotsFilter(block_on_error=False))
                     | f"Distinct D{depth}" >> beam.Distinct()
                 )
 

@@ -35,8 +35,12 @@ _robot_cache_lock = threading.Lock()
 _robot_cache: Dict[str, urobot.RobotFileParser] = {}
 
 
-def can_fetch(url: str, user_agent: str = USER_AGENT) -> bool:
-    """Sprawdź robots.txt; cache na host."""
+def can_fetch(url: str, user_agent: str = USER_AGENT, block_on_error: bool = False) -> bool:
+    """
+    Sprawdź robots.txt (cache per host).
+    - Jeśli block_on_error=False (domyślnie), brak dostępu do robots.txt NIE blokuje (zwraca True).
+    - Jeśli block_on_error=True, brak dostępu do robots.txt traktujemy jako zakaz (zwraca False).
+    """
     parsed = urlparse(url)
     origin = f"{parsed.scheme}://{parsed.netloc}"
     with _robot_cache_lock:
@@ -48,12 +52,12 @@ def can_fetch(url: str, user_agent: str = USER_AGENT) -> bool:
                 rfp.read()
             except Exception:
                 _robot_cache[origin] = rfp
-                return False
+                return False if block_on_error else True
             _robot_cache[origin] = rfp
     try:
         return rfp.can_fetch(user_agent, url)
     except Exception:
-        return False
+        return False if block_on_error else True
 
 
 WHITESPACE_RE = re.compile(r"\s+", re.U)
