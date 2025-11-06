@@ -3,8 +3,7 @@ from __future__ import annotations
 import time
 import re
 import threading
-from dataclasses import dataclass
-from typing import Iterable, List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict, Optional
 from urllib.parse import urljoin, urlparse
 import urllib.robotparser as urobot
 
@@ -14,8 +13,9 @@ from bs4 import BeautifulSoup
 USER_AGENT = "BeamWikiBot/0.1 (+https://example.local/edu)"
 HEADERS = {"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml"}
 
+
 class HostRateLimiter:
-    """Simple per-host token bucket limiter shared per DoFn instance."""
+    """Prosty limiter: minimalny odstęp między żądaniami na host."""
     def __init__(self, min_interval_sec: float = 1.0):
         self.min_interval = float(min_interval_sec)
         self._lock = threading.Lock()
@@ -30,10 +30,13 @@ class HostRateLimiter:
                 time.sleep(self.min_interval - delta)
             self._last[host] = time.time()
 
+
 _robot_cache_lock = threading.Lock()
 _robot_cache: Dict[str, urobot.RobotFileParser] = {}
 
+
 def can_fetch(url: str, user_agent: str = USER_AGENT) -> bool:
+    """Sprawdź robots.txt; cache na host."""
     parsed = urlparse(url)
     origin = f"{parsed.scheme}://{parsed.netloc}"
     with _robot_cache_lock:
@@ -52,16 +55,23 @@ def can_fetch(url: str, user_agent: str = USER_AGENT) -> bool:
     except Exception:
         return False
 
+
 WHITESPACE_RE = re.compile(r"\s+", re.U)
 
+
 def extract_text_and_links(url: str, html: str) -> Tuple[str, List[str], str]:
+    """Zwraca (plain_text, out_links, title)."""
     soup = BeautifulSoup(html, "html.parser")
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
     title = soup.title.get_text(strip=True) if soup.title else ""
-    text = WHITESPACE_RE.sub(" ", soup.get_text(" ")).strip()
-    links = [urljoin(url, a["href"]) for a in soup.find_all("a", href=True)]
+    text = soup.get_text(" ")
+    text = WHITESPACE_RE.sub(" ", text).strip()
+    links = []
+    for a in soup.find_all("a", href=True):
+        links.append(urljoin(url, a["href"]))
     return text, links, title
+
 
 def fetch(url: str, timeout: float = 10.0) -> Optional[str]:
     try:
