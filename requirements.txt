@@ -1,0 +1,22 @@
+# Core crawling & parsing
+requests==2.32.3
+beautifulsoup4==4.12.3
+lxml==5.2.1
+
+# URL & normalizacja
+tldextract==5.1.2
+
+# TF–IDF indexer (Apache Beam)
+apache-beam==2.57.0
+
+# CLI, logging
+tqdm==4.66.4
+
+# Searcher / utils
+numpy==1.26.4
+
+# Testy
+pytest==8.3.2
+
+# Typy opcjonalne
+typing_extensions==4.12.2
